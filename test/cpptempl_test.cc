@@ -106,3 +106,25 @@ TEST_CASE("cpptempl4", "if block") {
   REQUIRE(ret == "test");
 }
 
+
+
+TEST_CASE("cpptempl5", "for block") {
+  cpptempl::auto_data data;
+  data["test"].push_back(1);
+  data["test"].push_back(2);
+  std::string str = "{%for d in test%}test:{$d}{% endfor %}";
+  std::string ret = cpptempl::parse(str, data);
+  printf("for test:%s\n", ret.c_str());
+  // REQUIRE(ret == "test");
+
+  cpptempl::auto_data data2;
+  cpptempl::auto_data p1;
+  p1["name"] = "xu";
+  cpptempl::auto_data p2;
+  p2["name"] = "car";
+  data2["persons"].push_back(p1);
+  data2["persons"].push_back(p2);
+  str = "{%for person in persons%}name:{$person.name} {% endfor %}";
+  ret = cpptempl::parse(str, data2);
+  printf("for test:%s\n", ret.c_str());
+}

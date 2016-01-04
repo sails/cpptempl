@@ -14,6 +14,7 @@
 #ifndef CPPTEMPL_H_
 #define CPPTEMPL_H_
 
+#include <stdlib.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -47,7 +48,8 @@ class auto_data {
       boolean,
       number_integer,
       number_float,
-      map
+      map,
+      list
         };
 
   ///////////////////////////
@@ -110,7 +112,7 @@ class auto_data {
   auto_data(double v)  // NOLINT
       : value(v), type(data_type::number_float) {}
 
-  // map value
+  // map
   bool has(std::string key) const {
     if (type == data_type::map) {
       auto iter = map_data.find(key);
@@ -142,6 +144,18 @@ class auto_data {
       return auto_data();
     }
     return map_data.at(key);
+  }
+
+  // vector
+  int size() const {
+    return list_data.size();
+  }
+  auto_data operator[](int index) const {
+    return list_data[index];
+  }
+  void push_back(const auto_data& data) {
+    type = data_type::list;
+    list_data.push_back(data);
   }
 
   bool operator ==(const auto_data& data) {
@@ -293,9 +307,10 @@ class auto_data {
   }
 
  private:
-  data_value value = data_type::null;
   data_type type;
+  data_value value = data_type::null;
   std::map<std::string, auto_data> map_data;
+  std::vector<auto_data> list_data;
 };
 
 
@@ -415,7 +430,17 @@ class TokenFor : public Token {
   std::string m_val;
   token_vector m_children;
   // 拆分出来
-  explicit TokenFor(std::string expr) {}
+  explicit TokenFor(std::string expr) {
+    std::vector<std::string> elements;
+    char split_char = ' ';
+    SplitString(expr, &split_char, &elements);
+    if (elements.size() != 4) {
+      perror("cpp template string have error syntax 'for'");
+      exit(0);
+    }
+    m_val = elements[1];
+    m_key = elements[3];
+  }
   TokenType gettype() { return TOKEN_TYPE_FOR;}
   void set_children(const token_vector &children) {
     m_children.assign(children.begin(), children.end());
@@ -423,7 +448,19 @@ class TokenFor : public Token {
   token_vector &get_children() {
     return m_children;
   }
-  std::string get_text(const auto_data&) {  return m_key; }
+  std::string get_text(const auto_data& data) {
+    auto_data l = data.Get(m_key);
+    int listSize = l.size();
+    std::string str = "";
+    for (int i = 0; i < listSize; i++) {
+      auto_data d;
+      d[m_val] = l[i];
+      for (size_t j = 0; j < m_children.size(); ++j) {
+        str += m_children[j]->get_text(d);
+      }
+    }
+    return str;
+  }
 };
 
 // if block
