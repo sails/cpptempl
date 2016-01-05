@@ -2,7 +2,7 @@
 // All rights reserved.
 //
 // Official git repository and contact information can be found at
-// https://github.com/sails/sails and http://www.sailsxu.com/.
+// https://github.com/sails/cpptempl and http://www.sailsxu.com/.
 //
 // Filename: cpptempl.hpp
 // Description: This is a template engine for C++
