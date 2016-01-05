@@ -20,6 +20,8 @@
 #include <vector>
 #include <map>
 #include <memory>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 namespace cpptempl {
 
@@ -121,8 +123,6 @@ class auto_data {
   auto_data(int v)  // NOLINT
       : type(data_type::number_integer), value((int64_t)v) {}
   auto_data(size_t v)  // NOLINT
-      : type(data_type::number_integer), value((int64_t)v) {}
-  auto_data(ssize_t v)  // NOLINT
       : type(data_type::number_integer), value((int64_t)v) {}
   auto_data(double v)  // NOLINT
       : type(data_type::number_float), value(v) {}
@@ -455,7 +455,7 @@ class TokenVar : public Token {
       case auto_data::data_type::number_integer: {
         char temp[10] = {'\0'};
         int64_t t = ret;
-        snprintf(temp, sizeof(temp), "%lld",  t);
+        snprintf(temp, sizeof(temp), "%" PRIu64,  t);
         str = std::string(temp);
         break;
       }
