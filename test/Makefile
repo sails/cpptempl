@@ -1,4 +1,4 @@
-CFLAGS		= -std=c++11
+CFLAGS		= -std=c++11 -I../
 OBJECTS		= cpptempl_test.o
 
 test : $(OBJECTS)

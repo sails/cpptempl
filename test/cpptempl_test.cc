@@ -15,7 +15,7 @@
 
 #include <time.h>
 #include "catch.hpp"
-#include "../src/cpptempl.hpp"
+#include "../src/cpptempl.h"
 
 TEST_CASE("cpptempl1", "nomal object") {
   // test nomal obj
@@ -103,6 +103,12 @@ TEST_CASE("cpptempl4", "if block") {
   data5["test"] = 10;
   str = "{%if test == test %}test{% endif %}";
   ret = cpptempl::parse(str, data5);
+  REQUIRE(ret == "test");
+
+  cpptempl::auto_data data6;
+  data6["test"] = "test";
+  str = "{%if test == \"test\" %}test{% endif %}";
+  ret = cpptempl::parse(str, data6);
   REQUIRE(ret == "test");
 }
 

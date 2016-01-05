@@ -29,7 +29,7 @@ std::string ret = cpptempl::parse(str, data);  // ret will be "name:xu, age:10"
 ```
 
 ## Integration
-The single required source, file json.hpp is in the src directory, All you need to do is add
+The single required source, file cpptempl.h is in the src directory, All you need to do is add
 ```cpp
 #include "cpptempl.hpp"
 

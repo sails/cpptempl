@@ -14,6 +14,7 @@
 #ifndef CPPTEMPL_H_
 #define CPPTEMPL_H_
 
+#include <string.h>
 #include <stdlib.h>
 #include <string>
 #include <vector>
@@ -22,6 +23,7 @@
 
 namespace cpptempl {
 
+int objectId = 0;
 
 void SplitString(const std::string& str,
                  const char* delim,
@@ -63,8 +65,8 @@ class auto_data {
 
     data_value() {
     }
-    data_value(const std::string& v) {
-      str = new std::string(v);
+    data_value(std::string* v) {
+      str = v;
     }
     data_value(bool boolean) : boolean(boolean) {}
     data_value(int64_t v) : int_val(v) {}
@@ -72,7 +74,7 @@ class auto_data {
     data_value(data_type t) {
       switch (t) {
         case data_type::string: {
-          str = new std::string("");
+          str = NULL;
           break;
         }
         case data_type::boolean: {
@@ -96,21 +98,52 @@ class auto_data {
   // 从其它类型构造basic_data
   using string_t = std::string;
   auto_data() {
+    id = objectId++;
     type = data_type::null;
   }
   auto_data(const string_t& v)  // NOLINT
-      : value(v), type(data_type::string) {}
+      : type(data_type::string) {
+    id = objectId++;
+    std::string* str = new std::string(v);
+    value.str = str;
+  }
   auto_data(const char* v)  // NOLINT
-      : value(std::string(v)), type(data_type::string) {}
+      : type(data_type::string) {
+    id = objectId++;
+    std::string* str = new std::string(v);
+    value.str = str;
+  }
 
   auto_data(bool v)  // NOLINT
-      : value(v), type(data_type::boolean) {}
+      : type(data_type::boolean), value(v) {}
   auto_data(int64_t v)  // NOLINT
-      : value(v), type(data_type::number_integer) {}
+      : type(data_type::number_integer), value(v) {}
   auto_data(int v)  // NOLINT
-      : value((int64_t)v), type(data_type::number_integer) {}
+      : type(data_type::number_integer), value((int64_t)v) {}
   auto_data(double v)  // NOLINT
-      : value(v), type(data_type::number_float) {}
+      : type(data_type::number_float), value(v) {}
+  auto_data(const auto_data& data) {
+    id = objectId++;
+    type = data.type;
+    if (data.type == data_type::string) {
+      value.str = new std::string(*(data.value.str));
+    } else if (data.type == data_type::map) {
+      for (auto& item : data.map_data) {
+        auto_data d = item.second;
+        map_data[item.first] = d;
+      }
+    } else {
+      value = data.value;
+    }
+  }
+
+
+  ~auto_data() {
+    if (type == data_type::string && value.str != NULL) {
+      delete value.str;
+      value.str = NULL;
+    }
+  }
 
   // map
   bool has(std::string key) const {
@@ -122,6 +155,11 @@ class auto_data {
     }
     return false;
   }
+  // because of [] will insert data for key when not found, so
+  // can't defined as auto_data& operator[](const std::stirng& key) const;
+  // when param as "const auto_data&", call 'Get' method instead
+  // besides can't return const auto_data&, bacause of it will be use
+  // data["test"] = "test", this will change the result of reference
   auto_data& operator[](const std::string& key) {
     auto iter = map_data.find(key);
     if (iter == map_data.end()) {  // find
@@ -138,13 +176,17 @@ class auto_data {
     type = data_type::map;
     return map_data[key];
   }
-  auto_data Get(const std::string& key) const {
+
+  // because of want return auto_data&, so when there is not data
+  // for key, can't new one, here throw out_of_range exception
+  const auto_data& Get(const std::string& key) const {
     auto iter = map_data.find(key);
     if (iter == map_data.end()) {  // find
-      return auto_data();
+      throw new std::out_of_range("out of range is Get method");;
     }
     return map_data.at(key);
   }
+  
 
   // vector
   int size() const {
@@ -185,16 +227,15 @@ class auto_data {
   }
 
   // assignment operator
-  void operator =(auto_data data) {
+  void operator =(const auto_data& data) {
     type = data.type;
     if (data.type == data_type::string) {
-      value = new std::string(*data.value.str);
+      value.str = new std::string(data.value.str->c_str());
     } else if (data.type == data_type::map) {
       map_data = data.map_data;
     } else {
       value = data.value;
     }
-    value = data_value(data.value);
   }
   operator std::string() const {
     std::string str = "";
@@ -307,6 +348,7 @@ class auto_data {
   }
 
  private:
+  int id;
   data_type type;
   data_value value = data_type::null;
   std::map<std::string, auto_data> map_data;
@@ -317,8 +359,16 @@ class auto_data {
 //////////////////////////////////////////////////////////////////////////
 // parse_val
 //////////////////////////////////////////////////////////////////////////
+// will call auto_data copy constructor
 auto_data parse_val(std::string key, const auto_data& data) {
   // quoted string
+  if (key[0] == '\"') {
+    size_t index = key.substr(1).find_last_of("\"");
+    if (index != std::string::npos) {
+      return key.substr(1, index);
+    }
+    return "";
+  }
   size_t index = key.find(".");
   if (index == std::string::npos) {
     if (!data.has(key)) {
@@ -331,7 +381,7 @@ auto_data parse_val(std::string key, const auto_data& data) {
   if (!data.has(sub_key)) {
     return auto_data();
   }
-  auto_data item = data.Get(sub_key);
+  const auto_data& item = data.Get(sub_key);
   return parse_val(key.substr(index+1), item);
 }
 
@@ -449,12 +499,15 @@ class TokenFor : public Token {
     return m_children;
   }
   std::string get_text(const auto_data& data) {
-    auto_data l = data.Get(m_key);
+    if (!data.has(m_key)) {
+      return "";
+    }
+    const auto_data& l = data.Get(m_key);
     int listSize = l.size();
     std::string str = "";
     for (int i = 0; i < listSize; i++) {
       auto_data d;
-      d[m_val] = l[i];
+      d[m_val] = l[i];;  // this will call operator=, and will create new object
       for (size_t j = 0; j < m_children.size(); ++j) {
         str += m_children[j]->get_text(d);
       }
@@ -480,6 +533,8 @@ class TokenIf : public Token {
       for (size_t j = 0; j < m_children.size(); ++j) {
         str += m_children[j]->get_text(data);
       }
+    } else {
+      // printf("is not true:%s\n", m_expr.c_str());
     }
     return str;
   }
