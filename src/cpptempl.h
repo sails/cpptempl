@@ -25,7 +25,6 @@
 
 namespace cpptempl {
 
-int objectId = 0;
 
 void SplitString(const std::string& str,
                  const char* delim,
@@ -100,18 +99,15 @@ class auto_data {
   // 从其它类型构造basic_data
   using string_t = std::string;
   auto_data() {
-    id = objectId++;
     type = data_type::null;
   }
   auto_data(const string_t& v)  // NOLINT
       : type(data_type::string) {
-    id = objectId++;
     std::string* str = new std::string(v);
     value.str = str;
   }
   auto_data(const char* v)  // NOLINT
       : type(data_type::string) {
-    id = objectId++;
     std::string* str = new std::string(v);
     value.str = str;
   }
@@ -127,7 +123,6 @@ class auto_data {
   auto_data(double v)  // NOLINT
       : type(data_type::number_float), value(v) {}
   auto_data(const auto_data& data) {
-    id = objectId++;
     type = data.type;
     if (data.type == data_type::string) {
       value.str = new std::string(*(data.value.str));
@@ -352,7 +347,6 @@ class auto_data {
   }
 
  private:
-  int id;
   data_type type;
   data_value value = data_type::null;
   std::map<std::string, auto_data> map_data;
