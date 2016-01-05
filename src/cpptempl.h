@@ -481,15 +481,17 @@ class TokenFor : public Token {
   token_vector m_children;
   // 拆分出来
   explicit TokenFor(std::string expr) {
+    printf("expr:%s\n", expr.c_str());
     std::vector<std::string> elements;
-    char split_char = ' ';
-    SplitString(expr, &split_char, &elements);
+    char split[] = " ";
+    SplitString(expr, split, &elements);
     if (elements.size() != 4) {
       perror("cpp template string have error syntax 'for'");
       exit(0);
     }
     m_val = elements[1];
     m_key = elements[3];
+    printf("key:%s, val:%s\n", m_key.c_str(), m_val.c_str());
   }
   TokenType gettype() { return TOKEN_TYPE_FOR;}
   void set_children(const token_vector &children) {
@@ -499,9 +501,12 @@ class TokenFor : public Token {
     return m_children;
   }
   std::string get_text(const auto_data& data) {
+    printf("call for get_text\n");
     if (!data.has(m_key)) {
+      printf("has no key:%s\n", m_key.c_str());
       return "";
     }
+    printf("has key:%s\n", m_key.c_str());
     const auto_data& l = data.Get(m_key);
     int listSize = l.size();
     std::string str = "";
@@ -512,6 +517,7 @@ class TokenFor : public Token {
         str += m_children[j]->get_text(d);
       }
     }
+    printf("will return:%s\n", str.c_str());
     return str;
   }
 };
@@ -540,8 +546,8 @@ class TokenIf : public Token {
   }
   bool is_true(const auto_data& data) {
     std::vector<std::string> elements;
-    char split_char = ' ';
-    SplitString(m_expr, &split_char, &elements);
+    char split[] = " ";
+    SplitString(m_expr, split, &elements);
     if (elements.size() == 1) {
       return false;
     } else if (elements.size() == 2) {

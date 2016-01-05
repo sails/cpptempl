@@ -121,7 +121,7 @@ TEST_CASE("cpptempl5", "for block") {
   std::string str = "{%for d in test%}test:{$d}{% endfor %}";
   std::string ret = cpptempl::parse(str, data);
   printf("for test:%s\n", ret.c_str());
-  // REQUIRE(ret == "test");
+  REQUIRE(ret == "test:1test:2");
 
   cpptempl::auto_data data2;
   cpptempl::auto_data p1;
@@ -133,4 +133,5 @@ TEST_CASE("cpptempl5", "for block") {
   str = "{%for person in persons%}name:{$person.name} {% endfor %}";
   ret = cpptempl::parse(str, data2);
   printf("for test:%s\n", ret.c_str());
+  REQUIRE(ret == "name:xu name:car ");
 }
