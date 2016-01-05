@@ -118,8 +118,6 @@ class auto_data {
       : type(data_type::boolean), value(v) {}
   auto_data(int64_t v)  // NOLINT
       : type(data_type::number_integer), value(v) {}
-  auto_data(uint64_t v)  // NOLINT
-      : type(data_type::number_integer), value((int64_t)v) {}
   auto_data(int v)  // NOLINT
       : type(data_type::number_integer), value((int64_t)v) {}
   auto_data(size_t v)  // NOLINT
