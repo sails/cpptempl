@@ -25,7 +25,6 @@ TEST_CASE("cpptempl1", "nomal object") {
   std::string str = "name:{$name}, age:{$age}";
   std::string ret = cpptempl::parse(str, data);
   REQUIRE(ret == "name:xu, age:10");
-  printf("ret:%s\n", ret.c_str());
 }
 
 
@@ -44,7 +43,6 @@ TEST_CASE("cpptempl2", "object") {
                     "p2(name:{$two.name}, age:{$two.age})";
   std::string ret = cpptempl::parse(str, pers);
   REQUIRE(ret == "p1(name:x, age:11);p2(name:s, age:12)");
-  printf("ret:%s\n", ret.c_str());
 }
 
 
@@ -69,7 +67,6 @@ TEST_CASE("cpptempl4", "if block") {
   std::string str = "{%if test %}ok{% endif %}";
   std::string ret = cpptempl::parse(str, data1);
   REQUIRE(ret == "ok");
-  printf("%s\n", ret.c_str());
 
   // test bool value
   cpptempl::auto_data data2;
@@ -81,7 +78,6 @@ TEST_CASE("cpptempl4", "if block") {
         "{% endif %}";
   ret = cpptempl::parse(str, data2);
   REQUIRE(ret == "test1test2");
-  printf("%s\n", ret.c_str());
 
   // null value
   cpptempl::auto_data data3;
@@ -120,7 +116,6 @@ TEST_CASE("cpptempl5", "for block") {
   data["test"].push_back(2);
   std::string str = "{%for d in test%}test:{$d}{% endfor %}";
   std::string ret = cpptempl::parse(str, data);
-  printf("for test:%s\n", ret.c_str());
   REQUIRE(ret == "test:1test:2");
 
   cpptempl::auto_data data2;
@@ -132,6 +127,5 @@ TEST_CASE("cpptempl5", "for block") {
   data2["persons"].push_back(p2);
   str = "{%for person in persons%}name:{$person.name} {% endfor %}";
   ret = cpptempl::parse(str, data2);
-  printf("for test:%s\n", ret.c_str());
   REQUIRE(ret == "name:xu name:car ");
 }

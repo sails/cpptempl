@@ -481,7 +481,6 @@ class TokenFor : public Token {
   token_vector m_children;
   // 拆分出来
   explicit TokenFor(std::string expr) {
-    printf("expr:%s\n", expr.c_str());
     std::vector<std::string> elements;
     char split[] = " ";
     SplitString(expr, split, &elements);
@@ -491,7 +490,6 @@ class TokenFor : public Token {
     }
     m_val = elements[1];
     m_key = elements[3];
-    printf("key:%s, val:%s\n", m_key.c_str(), m_val.c_str());
   }
   TokenType gettype() { return TOKEN_TYPE_FOR;}
   void set_children(const token_vector &children) {
@@ -501,12 +499,10 @@ class TokenFor : public Token {
     return m_children;
   }
   std::string get_text(const auto_data& data) {
-    printf("call for get_text\n");
     if (!data.has(m_key)) {
       printf("has no key:%s\n", m_key.c_str());
       return "";
     }
-    printf("has key:%s\n", m_key.c_str());
     const auto_data& l = data.Get(m_key);
     int listSize = l.size();
     std::string str = "";
@@ -517,7 +513,6 @@ class TokenFor : public Token {
         str += m_children[j]->get_text(d);
       }
     }
-    printf("will return:%s\n", str.c_str());
     return str;
   }
 };
@@ -617,6 +612,15 @@ token_vector tokenize(std::string text) {
       pos = text.find("}");
       if (pos != std::string::npos) {
         std::string expression = text.substr(1, pos-2);
+        // strim
+        size_t spos = expression.find_first_not_of(" ");
+        if (spos != 0 && spos != std::string::npos) {
+          expression = expression.substr(spos);
+        }
+        size_t epos = expression.find_last_not_of(" ");
+        if (epos != expression.length() && epos != std::string::npos) {
+          expression = expression.substr(0, epos+1);
+        }
         text = text.substr(pos+1);
         if (expression.find_first_of("for") == 0) {
           tokens.push_back(std::shared_ptr<Token>(new TokenFor(expression)));
