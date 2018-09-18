@@ -26,9 +26,9 @@
 namespace cpptempl {
 
 
-void SplitString(const std::string& str,
-                 const char* delim,
-                 std::vector<std::string>* result) {
+inline void SplitString(const std::string& str,
+                        const char* delim,
+                        std::vector<std::string>* result) {
   char *cstr, *p;
   cstr = new char[str.size()+1];
   snprintf(cstr, str.size()+1, "%s", str.c_str());
@@ -358,7 +358,7 @@ class auto_data {
 // parse_val
 //////////////////////////////////////////////////////////////////////////
 // will call auto_data copy constructor
-auto_data parse_val(std::string key, const auto_data& data) {
+inline auto_data parse_val(std::string key, const auto_data& data) {
   // quoted string
   if (key[0] == '\"') {
     size_t index = key.substr(1).find_last_of("\"");
@@ -574,108 +574,113 @@ class TokenEnd : public Token {
 
 
 
-
-//////////////////////////////////////////////////////////////////////////
-// tokenize
-// parses a template into tokens (text, for, if, variable)
-//////////////////////////////////////////////////////////////////////////
-token_vector tokenize(std::string text) {
-  token_vector tokens;
-  while (!text.empty()) {
-    size_t pos = text.find("{");
-    if (pos == std::string::npos) {
-      if (!text.empty()) {
-        tokens.push_back(std::shared_ptr<Token>(new TokenText(text)));
-      }
-      return tokens;
-    }
-    std::string pre_text = text.substr(0, pos);
-    if (!pre_text.empty()) {
-      tokens.push_back(std::shared_ptr<Token>(new TokenText(pre_text)));
-    }
-    text = text.substr(pos+1);
-    if (text.empty()) {
-      tokens.push_back(std::shared_ptr<Token>(new TokenText("{")));
-      return tokens;
-    }
-    // variable
-    if (text[0] == '$') {
-      pos = text.find("}");
-      if (pos != std::string::npos) {
-        tokens.push_back(
-            std::shared_ptr<Token>(new TokenVar(text.substr(1, pos-1))));
-        text = text.substr(pos+1);
-      }
-    } else if (text[0] == '%') {  // control statement
-      pos = text.find("}");
-      if (pos != std::string::npos) {
-        std::string expression = text.substr(1, pos-2);
-        // strim
-        size_t spos = expression.find_first_not_of(" ");
-        if (spos != 0 && spos != std::string::npos) {
-          expression = expression.substr(spos);
+class Parser {
+ private:
+    //////////////////////////////////////////////////////////////////////////
+    // tokenize
+    // parses a template into tokens (text, for, if, variable)
+    //////////////////////////////////////////////////////////////////////////
+    static token_vector tokenize(std::string text) {
+        token_vector tokens;
+        while (!text.empty()) {
+            size_t pos = text.find("{");
+            if (pos == std::string::npos) {
+                if (!text.empty()) {
+                    tokens.push_back(std::shared_ptr<Token>(new TokenText(text)));
+                }
+                return tokens;
+            }
+            std::string pre_text = text.substr(0, pos);
+            if (!pre_text.empty()) {
+                tokens.push_back(std::shared_ptr<Token>(new TokenText(pre_text)));
+            }
+            text = text.substr(pos+1);
+            if (text.empty()) {
+                tokens.push_back(std::shared_ptr<Token>(new TokenText("{")));
+                return tokens;
+            }
+            // variable
+            if (text[0] == '$') {
+                pos = text.find("}");
+                if (pos != std::string::npos) {
+                    tokens.push_back(
+                        std::shared_ptr<Token>(new TokenVar(text.substr(1, pos-1))));
+                    text = text.substr(pos+1);
+                }
+            } else if (text[0] == '%') {  // control statement
+                pos = text.find("}");
+                if (pos != std::string::npos) {
+                    std::string expression = text.substr(1, pos-2);
+                    // strim
+                    size_t spos = expression.find_first_not_of(" ");
+                    if (spos != 0 && spos != std::string::npos) {
+                        expression = expression.substr(spos);
+                    }
+                    size_t epos = expression.find_last_not_of(" ");
+                    if (epos != expression.length() && epos != std::string::npos) {
+                        expression = expression.substr(0, epos+1);
+                    }
+                    text = text.substr(pos+1);
+                    if (expression.find_first_of("for") == 0) {
+                        tokens.push_back(std::shared_ptr<Token>(new TokenFor(expression)));
+                    } else if (expression.find_first_of("if") == 0) {
+                        tokens.push_back(std::shared_ptr<Token>(new TokenIf(expression)));
+                    } else {
+                        tokens.push_back(std::shared_ptr<Token>(
+                            new TokenEnd(expression)));
+                    }
+                }
+            } else {
+                tokens.push_back(std::shared_ptr<Token>(new TokenText("{")));
+            }
         }
-        size_t epos = expression.find_last_not_of(" ");
-        if (epos != expression.length() && epos != std::string::npos) {
-          expression = expression.substr(0, epos+1);
-        }
-        text = text.substr(pos+1);
-        if (expression.find_first_of("for") == 0) {
-          tokens.push_back(std::shared_ptr<Token>(new TokenFor(expression)));
-        } else if (expression.find_first_of("if") == 0) {
-          tokens.push_back(std::shared_ptr<Token>(new TokenIf(expression)));
-        } else {
-          tokens.push_back(std::shared_ptr<Token>(
-              new TokenEnd(expression)));
-        }
-      }
-    } else {
-      tokens.push_back(std::shared_ptr<Token>(new TokenText("{")));
+        return tokens;
     }
-  }
-  return tokens;
-}
 
-//////////////////////////////////////////////////////////////////////////
-// parse_tree
-// recursively parses list of tokens into a tree
-//////////////////////////////////////////////////////////////////////////
-void parse_tree(token_vector* tokens,
-                token_vector* tree,
-                TokenType until = TOKEN_TYPE_NONE) {
-  while (!tokens->empty()) {
-    std::shared_ptr<Token> token = tokens->at(0);
-    tokens->erase(tokens->begin());
-    if (token->gettype() == TOKEN_TYPE_FOR) {
-      token_vector children;
-      parse_tree(tokens, &children, TOKEN_TYPE_ENDFOR);
-      token->set_children(children);
-    } else if (token->gettype() == TOKEN_TYPE_IF) {
-      token_vector children;
-      parse_tree(tokens, &children, TOKEN_TYPE_ENDIF);
-      token->set_children(children);
-    } else if (token->gettype() == until) {
-      return;
+    //////////////////////////////////////////////////////////////////////////
+    // parse_tree
+    // recursively parses list of tokens into a tree
+    //////////////////////////////////////////////////////////////////////////
+    static void parse_tree(token_vector* tokens,
+                    token_vector* tree,
+                    TokenType until = TOKEN_TYPE_NONE) {
+        while (!tokens->empty()) {
+            std::shared_ptr<Token> token = tokens->at(0);
+            tokens->erase(tokens->begin());
+            if (token->gettype() == TOKEN_TYPE_FOR) {
+                token_vector children;
+                parse_tree(tokens, &children, TOKEN_TYPE_ENDFOR);
+                token->set_children(children);
+            } else if (token->gettype() == TOKEN_TYPE_IF) {
+                token_vector children;
+                parse_tree(tokens, &children, TOKEN_TYPE_ENDIF);
+                token->set_children(children);
+            } else if (token->gettype() == until) {
+                return;
+            }
+            tree->push_back(token);
+        }
     }
-    tree->push_back(token);
-  }
+
+ public:
+    static std::string parse(std::string templ_text, const auto_data& data) {
+        token_vector tokens;
+        tokens = tokenize(templ_text);
+        token_vector tree;
+        parse_tree(&tokens, &tree);
+
+        std::string str = "";
+        for (size_t i = 0 ; i < tree.size() ; ++i) {
+            str =  str + tree[i]->get_text(data);
+        }
+        return str;
+    }
+
+};
+
+inline std::string parse(std::string templ_text, const auto_data& data) {
+    return Parser::parse(templ_text, data);
 }
-
-
-std::string parse(std::string templ_text, const auto_data& data) {
-  token_vector tokens;
-  tokens = tokenize(templ_text);
-  token_vector tree;
-  parse_tree(&tokens, &tree);
-
-  std::string str = "";
-  for (size_t i = 0 ; i < tree.size() ; ++i) {
-    str =  str + tree[i]->get_text(data);
-  }
-  return str;
-}
-
-
 
 }  // namespace cpptempl
 
